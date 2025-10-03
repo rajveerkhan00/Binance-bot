@@ -1,64 +1,58 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Search, TrendingUp, TrendingDown, Star, Volume2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, TrendingUp, TrendingDown, Star, Volume2, ChevronUp, ChevronDown } from 'lucide-react';
 import { CoinData } from '../types';
 import { formatPrice, formatPercent } from '../lib/utils';
-import binance from '../lib/binance';
 
-const CoinGrid: React.FC = () => {
-  const [coins, setCoins] = useState<CoinData[]>([]);
-  const [filteredCoins, setFilteredCoins] = useState<CoinData[]>([]);
+interface CoinGridProps {
+  coins: CoinData[];
+}
+
+const CoinGrid: React.FC<CoinGridProps> = ({ coins }) => {
+  const [filteredCoins, setFilteredCoins] = useState<CoinData[]>(coins);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedCoin, setSelectedCoin] = useState<string>('BTCUSDT');
-
-  const popularCoins = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOTUSDT', 'LINKUSDT', 'LTCUSDT', 'BCHUSDT'];
+  const [selectedCoin, setSelectedCoin] = useState<string>(coins.length > 0 ? coins[0].symbol : 'BTCUSDT');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof CoinData; direction: 'ascending' | 'descending' } | null>(null);
 
   useEffect(() => {
-    loadCoinData();
-    const interval = setInterval(loadCoinData, 3000); // Update every 3 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
+    let sortedCoins = [...coins];
 
-  useEffect(() => {
-    const filtered = coins.filter(coin =>
+    if (sortConfig) {
+      sortedCoins.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    const filtered = sortedCoins.filter(coin =>
       coin.symbol.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredCoins(filtered);
-  }, [searchTerm, coins]);
 
-  const loadCoinData = async () => {
-    try {
-      const prices = await binance.getAllPrices();
-      const coinData: CoinData[] = [];
-
-      for (const symbol of popularCoins) {
-        const price = parseFloat(prices[symbol]);
-        if (price) {
-          // Simulate price change for demo (in real app, you'd get this from 24h stats)
-          const change24h = (Math.random() - 0.5) * 10;
-          const priceChange = price * (change24h / 100);
-          
-          coinData.push({
-            symbol,
-            price,
-            change24h,
-            volume: Math.random() * 1000000000,
-            priceChange,
-            priceChangePercent: change24h,
-            lastUpdate: new Date()
-          });
-        }
-      }
-
-      setCoins(coinData);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading coin data:', error);
-      setIsLoading(false);
+    if (!filtered.some(c => c.symbol === selectedCoin)) {
+      setSelectedCoin(filtered.length > 0 ? filtered[0].symbol : '');
     }
+  }, [searchTerm, coins, sortConfig, selectedCoin]);
+
+  const requestSort = (key: keyof CoinData) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: keyof CoinData) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return null;
+    }
+    return sortConfig.direction === 'ascending' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
   const getChangeColor = (change: number) => {
@@ -71,23 +65,8 @@ const CoinGrid: React.FC = () => {
       <TrendingDown className="w-4 h-4" />;
   };
 
-  if (isLoading) {
-    return (
-      <div className="glass-effect rounded-2xl p-6 border border-gray-700">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="space-y-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="glass-effect rounded-2xl p-6 border border-gray-700">
+    <div className="glass-effect rounded-2xl p-6 border border-gray-700 shadow-lg">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-white flex items-center space-x-2">
           <TrendingUp className="w-6 h-6 text-accent" />
@@ -100,19 +79,39 @@ const CoinGrid: React.FC = () => {
             placeholder="Search coins..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-accent"
+            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-accent transition-all"
           />
         </div>
       </div>
 
-      <div className="overflow-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">
-              <th className="text-left py-3 px-4 text-gray-400 font-semibold">Coin</th>
-              <th className="text-right py-3 px-4 text-gray-400 font-semibold">Price</th>
-              <th className="text-right py-3 px-4 text-gray-400 font-semibold">24h Change</th>
-              <th className="text-right py-3 px-4 text-gray-400 font-semibold">Volume</th>
+              <th 
+                className="text-left py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
+                onClick={() => requestSort('symbol')}
+              >
+                Coin {getSortIcon('symbol')}
+              </th>
+              <th 
+                className="text-right py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
+                onClick={() => requestSort('price')}
+              >
+                Price {getSortIcon('price')}
+              </th>
+              <th 
+                className="text-right py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
+                onClick={() => requestSort('change24h')}
+              >
+                24h Change {getSortIcon('change24h')}
+              </th>
+              <th 
+                className="text-right py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
+                onClick={() => requestSort('volume')}
+              >
+                Volume {getSortIcon('volume')}
+              </th>
               <th className="text-right py-3 px-4 text-gray-400 font-semibold">Action</th>
             </tr>
           </thead>
@@ -120,12 +119,12 @@ const CoinGrid: React.FC = () => {
             {filteredCoins.map((coin) => (
               <tr 
                 key={coin.symbol} 
-                className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer"
+                className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer group"
                 onClick={() => setSelectedCoin(coin.symbol)}
               >
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Star className="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -176,7 +175,7 @@ const CoinGrid: React.FC = () => {
 
       {/* Selected Coin Info */}
       {selectedCoin && (
-        <div className="mt-4 p-4 bg-secondary/50 rounded-xl border border-gray-600">
+        <div className="mt-4 p-4 bg-secondary/50 rounded-xl border border-gray-600 shadow-md">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-white">{selectedCoin}</h3>

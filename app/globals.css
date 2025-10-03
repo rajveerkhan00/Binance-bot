@@ -1,64 +1,66 @@
 @import "tailwindcss";
-
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 30, 30, 46;
-  --background-end-rgb: 20, 20, 36;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  font-family: 'Inter', sans-serif;
-}
-
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  --primary: #0f0c29;
+  --secondary: #302b63;
+  --accent: #24243e;
+  --profit: #4ade80;
+  --loss: #f87171;
+  --gray-900: #111827;
+  --gray-800: #1f2937;
+  --gray-700: #374151;
+  --gray-600: #4b5563;
+  --gray-400: #9ca3af;
+  --white: #ffffff;
+  --black: #000000;
 }
 
 .glass-effect {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(31, 41, 55, 0.7);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
 }
 
-.profit-glow {
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+.glass-effect:hover {
+  background: rgba(31, 41, 55, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.loss-glow {
-  box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+.text-profit {
+  color: var(--profit);
 }
 
-.price-up {
-  color: #00ff88;
-  animation: pulse-green 1s infinite;
+.text-loss {
+  color: var(--loss);
 }
 
-.price-down {
-  color: #ff4444;
-  animation: pulse-red 1s infinite;
+.bg-profit {
+  background-color: var(--profit);
 }
 
-@keyframes pulse-green {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+.bg-loss {
+  background-color: var(--loss);
 }
 
-@keyframes pulse-red {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+.from-primary {
+  background: linear-gradient(to right, #0f0c29, #302b63);
+}
+
+.to-gray-900 {
+  background: linear-gradient(to right, #302b63, #111827);
+}
+
+/* Add subtle glow to active elements */
+.animate-pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(34, 211, 238, 0);
+  }
 }
