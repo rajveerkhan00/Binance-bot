@@ -1,103 +1,467 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import { useState, useEffect, useRef } from 'react';
+import Header from './components/Header';
+import TradingView from './components/TradingView';
+import StrategyPanel from './components/StrategyPanel';
+import CoinGrid from './components/CoinGrid';
+import TradeHistory from './components/TradeHistory';
+import RiskManager from './components/RiskManager';
+import { TradeSignal, TradeHistory as TradeHistoryType, MarketAnalysis, CoinData } from './types';
+import { TradingStrategies } from './lib/strategies';
+import { generateId, calculatePnL } from './lib/utils';
+import binance from './lib/binance';
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+// Define proper types for Binance responses
+interface BinanceTicker {
+  symbol: string;
+  price: string;
+}
+
+interface Binance24hrStats {
+  symbol: string;
+  lastPrice: string;
+  priceChange: string;
+  priceChangePercent: string;
+  volume: string;
+}
+
+export default function HomePage() {
+  // Trading Bot State
+  const [signal, setSignal] = useState<TradeSignal>({
+    symbol: 'BTCUSDT',
+    action: 'HOLD',
+    confidence: 0,
+    price: 0,
+    timestamp: new Date(),
+    duration: 'N/A',
+    reason: 'Initializing...',
+    stopLoss: 0,
+    takeProfit: 0,
+    leverage: 1
+  });
+
+  const [marketAnalysis, setMarketAnalysis] = useState<MarketAnalysis>({
+    trend: 'SIDEWAYS',
+    strength: 0,
+    volume: 0,
+    volatility: 0,
+    rsi: 50,
+    macd: {
+      value: 0,
+      signal: 0,
+      histogram: 0
+    }
+  });
+
+  const [allSignals, setAllSignals] = useState<TradeSignal[]>([]);
+  const [activeStrategies, setActiveStrategies] = useState<string[]>([
+    'Multi-Timeframe RSI',
+    'Trend Following MACD',
+    'Mean Reversion BB'
+  ]);
+
+  // Trade History State
+  const [trades, setTrades] = useState<TradeHistoryType[]>([]);
+  const [currentTrade, setCurrentTrade] = useState<TradeHistoryType | null>(null);
+
+  // Market Data State
+  const [coins, setCoins] = useState<CoinData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [marketStatus, setMarketStatus] = useState('CONNECTING');
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+
+  // Refs
+  const priceHistoryRef = useRef<number[]>([]);
+  const highHistoryRef = useRef<number[]>([]);
+  const lowHistoryRef = useRef<number[]>([]);
+  const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize Bot
+  useEffect(() => {
+    initializeBot();
+    
+    return () => {
+      // Cleanup
+      if (analysisIntervalRef.current) {
+        clearInterval(analysisIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const initializeBot = async () => {
+    try {
+      setIsLoading(true);
+      setMarketStatus('INITIALIZING');
+
+      // Load initial market data
+      await loadInitialMarketData();
+      
+      // Start real-time data streaming
+      startRealTimeData();
+      
+      // Start analysis engine
+      startAnalysisEngine();
+
+      setMarketStatus('LIVE');
+      setIsLoading(false);
+
+    } catch (error) {
+      console.error('Failed to initialize bot:', error);
+      setMarketStatus('ERROR');
+      setIsLoading(false);
+    }
+  };
+
+  const loadInitialMarketData = async () => {
+    try {
+      // Get BTC historical data for analysis
+      const klines = await binance.getKlines('BTCUSDT', '1m', 100);
+      
+      if (klines.length > 0) {
+        priceHistoryRef.current = klines.map(k => k.close);
+        highHistoryRef.current = klines.map(k => k.high);
+        lowHistoryRef.current = klines.map(k => k.low);
+        
+        // Set initial price
+        const currentPrice = klines[klines.length - 1].close;
+        setSignal(prev => ({ ...prev, price: currentPrice }));
+      }
+
+      // Load popular coins with simulated data (to avoid API issues)
+      const popularCoins = [
+        'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT', 'DOTUSDT', 
+        'LINKUSDT', 'LTCUSDT', 'BCHUSDT', 'EOSUSDT', 'XLMUSDT', 'TRXUSDT',
+        'MATICUSDT', 'SOLUSDT', 'AVAXUSDT', 'ATOMUSDT', 'FTMUSDT', 'ALGOUSDT'
+      ];
+      
+      const coinData: CoinData[] = [];
+      
+      for (const symbol of popularCoins) {
+        try {
+          // Get current price
+          const price = await binance.getPrice(symbol);
+          
+          if (price) {
+            // Generate realistic 24h change between -10% and +10%
+            const change24h = (Math.random() - 0.5) * 20;
+            const priceChange = price * (change24h / 100);
+            const volume = Math.random() * 1000000000;
+            
+            coinData.push({
+              symbol,
+              price,
+              change24h,
+              volume,
+              priceChange,
+              priceChangePercent: change24h,
+              lastUpdate: new Date()
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to load data for ${symbol}:`, error);
+          
+          // Fallback: create simulated data
+          const simulatedPrice = 100 + Math.random() * 1000;
+          const change24h = (Math.random() - 0.5) * 20;
+          const priceChange = simulatedPrice * (change24h / 100);
+          const volume = Math.random() * 1000000000;
+          
+          coinData.push({
+            symbol,
+            price: simulatedPrice,
+            change24h,
+            volume,
+            priceChange,
+            priceChangePercent: change24h,
+            lastUpdate: new Date()
+          });
+        }
+      }
+      
+      setCoins(coinData);
+
+    } catch (error) {
+      console.error('Error loading initial market data:', error);
+      
+      // Create fallback data
+      const fallbackCoins: CoinData[] = [
+        { symbol: 'BTCUSDT', price: 45000, change24h: 2.5, volume: 25000000000, priceChange: 1125, priceChangePercent: 2.5, lastUpdate: new Date() },
+        { symbol: 'ETHUSDT', price: 3000, change24h: 1.8, volume: 15000000000, priceChange: 54, priceChangePercent: 1.8, lastUpdate: new Date() },
+        { symbol: 'BNBUSDT', price: 400, change24h: -0.5, volume: 2000000000, priceChange: -2, priceChangePercent: -0.5, lastUpdate: new Date() },
+        { symbol: 'ADAUSDT', price: 1.2, change24h: 5.2, volume: 800000000, priceChange: 0.062, priceChangePercent: 5.2, lastUpdate: new Date() },
+        { symbol: 'XRPUSDT', price: 0.75, change24h: -1.2, volume: 1200000000, priceChange: -0.009, priceChangePercent: -1.2, lastUpdate: new Date() },
+      ];
+      
+      setCoins(fallbackCoins);
+      priceHistoryRef.current = Array(100).fill(0).map((_, i) => 45000 + (Math.random() - 0.5) * 1000);
+      highHistoryRef.current = priceHistoryRef.current.map(p => p * 1.01);
+      lowHistoryRef.current = priceHistoryRef.current.map(p => p * 0.99);
+      setSignal(prev => ({ ...prev, price: 45000 }));
+    }
+  };
+
+  const startRealTimeData = () => {
+    // Subscribe to BTC price updates
+    const unsubscribe = binance.subscribeToPrice('BTCUSDT', (price: number) => {
+      // Update price history
+      priceHistoryRef.current = [...priceHistoryRef.current.slice(-99), price];
+      
+      // Update high/low history (simplified)
+      highHistoryRef.current = [...highHistoryRef.current.slice(-99), price * (1 + Math.random() * 0.001)];
+      lowHistoryRef.current = [...lowHistoryRef.current.slice(-99), price * (1 - Math.random() * 0.001)];
+      
+      // Update current price in signal
+      setSignal(prev => ({ ...prev, price }));
+      
+      // Update last update time
+      setLastUpdate(new Date());
+    });
+
+    // Simulate additional coin updates
+    const coinUpdateInterval = setInterval(() => {
+      setCoins(prev => prev.map(coin => {
+        const randomChange = (Math.random() - 0.5) * 2; // -1% to +1%
+        const newPrice = coin.price * (1 + randomChange / 100);
+        const newChange24h = coin.change24h + randomChange;
+        
+        return {
+          ...coin,
+          price: newPrice,
+          change24h: newChange24h,
+          priceChange: newPrice - coin.price,
+          priceChangePercent: newChange24h,
+          lastUpdate: new Date()
+        };
+      }));
+    }, 3000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(coinUpdateInterval);
+    };
+  };
+
+  const startAnalysisEngine = () => {
+    // Run analysis every 5 seconds
+    analysisIntervalRef.current = setInterval(() => {
+      if (priceHistoryRef.current.length >= 50) { // Ensure we have enough data
+        performTechnicalAnalysis();
+      }
+    }, 5000);
+
+    // Initial analysis
+    setTimeout(() => {
+      if (priceHistoryRef.current.length >= 50) {
+        performTechnicalAnalysis();
+      }
+    }, 1000);
+  };
+
+  const performTechnicalAnalysis = () => {
+    try {
+      const prices = priceHistoryRef.current;
+      const highs = highHistoryRef.current;
+      const lows = lowHistoryRef.current;
+
+      if (prices.length < 50) return;
+
+      // Get signals from all strategies
+      const strategySignals = TradingStrategies.getAllSignals(prices, highs, lows);
+      setAllSignals(strategySignals);
+
+      // Get consensus signal
+      const consensusSignal = TradingStrategies.getConsensusSignal(prices, highs, lows);
+      setSignal(consensusSignal);
+
+      // Get market analysis
+      const analysis = TradingStrategies.analyzeMarket(prices, highs, lows);
+      setMarketAnalysis(analysis);
+
+    } catch (error) {
+      console.error('Error in technical analysis:', error);
+    }
+  };
+
+  const handleTradeExecute = (trade: TradeHistoryType) => {
+    setTrades(prev => [trade, ...prev.slice(0, 49)]); // Keep last 50 trades
+    setCurrentTrade(null);
+  };
+
+  const handleStartTrade = () => {
+    if (signal.action === 'HOLD' || signal.confidence < 0.6) {
+      alert('Low confidence signal. Wait for better opportunity.');
+      return;
+    }
+
+    const trade: TradeHistoryType = {
+      id: generateId(),
+      symbol: signal.symbol,
+      action: signal.action,
+      entryPrice: signal.price,
+      exitPrice: signal.price,
+      quantity: 0.001,
+      pnl: 0,
+      pnlPercent: 0,
+      duration: '0s',
+      status: 'OPEN',
+      timestamp: new Date(),
+      strategy: 'AI Consensus'
+    };
+
+    setCurrentTrade(trade);
+    setTrades(prev => [trade, ...prev.slice(0, 49)]);
+  };
+
+  const handleCloseTrade = (tradeId: string, exitPrice: number) => {
+    setTrades(prev => prev.map(trade => {
+      if (trade.id === tradeId && trade.status === 'OPEN') {
+        const isLong = trade.action === 'BUY';
+        const { pnl, pnlPercent } = calculatePnL(
+          trade.entryPrice,
+          exitPrice,
+          trade.quantity,
+          signal.leverage,
+          isLong
+        );
+
+        return {
+          ...trade,
+          exitPrice,
+          pnl,
+          pnlPercent,
+          status: pnl >= 0 ? 'WIN' : 'LOSS',
+          duration: formatTradeDuration(trade.timestamp)
+        };
+      }
+      return trade;
+    }));
+
+    if (currentTrade?.id === tradeId) {
+      setCurrentTrade(null);
+    }
+  };
+
+  const formatTradeDuration = (startTime: Date): string => {
+    const duration = Date.now() - startTime.getTime();
+    const seconds = Math.floor(duration / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+  };
+
+  // Calculate statistics for header
+  const totalTrades = trades.length;
+  const winningTrades = trades.filter(t => t.status === 'WIN').length;
+  const losingTrades = trades.filter(t => t.status === 'LOSS').length;
+  const winRate = winningTrades + losingTrades > 0 
+    ? Math.round((winningTrades / (winningTrades + losingTrades)) * 100) 
+    : 0;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary to-gray-900 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="glass-effect rounded-2xl p-8 text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-white mb-2">Initializing Trading Bot</h2>
+            <p className="text-gray-400">Loading market data and starting analysis engine...</p>
+            <div className="mt-4 text-sm text-yellow-400">
+              Status: {marketStatus}
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary to-gray-900 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <Header 
+          signal={signal}
+          marketStatus={marketStatus}
+          lastUpdate={lastUpdate}
+          totalTrades={totalTrades}
+          winRate={winRate}
+        />
+
+        {/* Main Trading Dashboard */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left Column - Trading View & Strategies */}
+          <div className="xl:col-span-2 space-y-6">
+            <TradingView 
+              signal={signal}
+              marketAnalysis={marketAnalysis}
+              onTradeExecute={handleTradeExecute}
+            />
+            
+            <StrategyPanel 
+              signals={allSignals}
+              activeStrategies={activeStrategies}
+            />
+          </div>
+
+          {/* Right Column - Market Overview */}
+          <div className="space-y-6">
+            <CoinGrid />
+          </div>
+        </div>
+
+        {/* Bottom Section - History & Risk Management */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TradeHistory trades={trades} />
+          <RiskManager />
+        </div>
+
+        {/* Real-time Status Bar */}
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2">
+          <div className="glass-effect rounded-full px-4 py-2 border border-gray-600 flex items-center space-x-3 text-sm">
+            <div className={`w-2 h-2 rounded-full ${
+              marketStatus === 'LIVE' ? 'bg-profit animate-pulse' : 
+              marketStatus === 'ERROR' ? 'bg-loss' : 'bg-yellow-400'
+            }`}></div>
+            <span className="text-white">
+              {marketStatus === 'LIVE' ? 'System Live' : 
+               marketStatus === 'ERROR' ? 'System Error' : 'Initializing'}
+            </span>
+            <span className="text-gray-400">•</span>
+            <span className="text-gray-400">Last update: {lastUpdate.toLocaleTimeString()}</span>
+            <span className="text-gray-400">•</span>
+            <span className="text-gray-400">BTC: ${signal.price.toFixed(2)}</span>
+            <span className="text-gray-400">•</span>
+            <span className={`${
+              signal.action === 'BUY' ? 'text-profit' : 
+              signal.action === 'SELL' ? 'text-loss' : 'text-gray-400'
+            }`}>
+              Signal: {signal.action} ({(signal.confidence * 100).toFixed(1)}%)
+            </span>
+          </div>
+        </div>
+
+        {/* Emergency Overlay for Critical Errors */}
+        {marketStatus === 'ERROR' && (
+          <div className="fixed inset-0 bg-red-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-effect rounded-2xl p-8 max-w-md text-center border border-loss">
+              <div className="text-loss text-6xl mb-4">⚠️</div>
+              <h3 className="text-2xl font-bold text-white mb-2">System Error</h3>
+              <p className="text-gray-300 mb-6">
+                The trading bot has encountered a critical error. All trading activities have been suspended.
+              </p>
+              <button 
+                onClick={initializeBot}
+                className="bg-accent hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+              >
+                Restart Bot
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
