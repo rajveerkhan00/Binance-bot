@@ -1,9 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  experimental: {
-    appDir: true,
-  },
+  // Removed experimental appDir as it's no longer needed in Next.js 13+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Don't attempt to bundle Node.js modules in the browser
