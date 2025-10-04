@@ -1,195 +1,155 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Search, TrendingUp, TrendingDown, Star, Volume2, ChevronUp, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { TrendingUp, TrendingDown, Loader, Star, Zap } from 'lucide-react';
 import { CoinData } from '../types';
-import { formatPrice, formatPercent } from '../lib/utils';
+import { formatNumber } from '../lib/utils';
 
 interface CoinGridProps {
   coins: CoinData[];
+  onSelectCoin: (coin: CoinData) => void;
+  selectedCoin: string;
+  onLoadMore: () => void;
+  hasMore: boolean;
+  isLoading: boolean;
+  filterMode: 'all' | 'buy' | 'sell';
 }
 
-const CoinGrid: React.FC<CoinGridProps> = ({ coins }) => {
-  const [filteredCoins, setFilteredCoins] = useState<CoinData[]>(coins);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCoin, setSelectedCoin] = useState<string>(coins.length > 0 ? coins[0].symbol : 'BTCUSDT');
-  const [sortConfig, setSortConfig] = useState<{ key: keyof CoinData; direction: 'ascending' | 'descending' } | null>(null);
-
-  useEffect(() => {
-    let sortedCoins = [...coins];
-
-    if (sortConfig) {
-      sortedCoins.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
+const CoinGrid: React.FC<CoinGridProps> = ({ 
+  coins, 
+  onSelectCoin, 
+  selectedCoin, 
+  onLoadMore, 
+  hasMore, 
+  isLoading,
+  filterMode
+}) => {
+  const getFilterTitle = () => {
+    switch (filterMode) {
+      case 'buy': return '100% Buy Signals (95%+ Confidence)';
+      case 'sell': return '100% Sell Signals (95%+ Confidence)';
+      default: return 'All Market Coins';
     }
-
-    const filtered = sortedCoins.filter(coin =>
-      coin.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredCoins(filtered);
-
-    if (!filtered.some(c => c.symbol === selectedCoin)) {
-      setSelectedCoin(filtered.length > 0 ? filtered[0].symbol : '');
-    }
-  }, [searchTerm, coins, sortConfig, selectedCoin]);
-
-  const requestSort = (key: keyof CoinData) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
   };
 
-  const getSortIcon = (key: keyof CoinData) => {
-    if (!sortConfig || sortConfig.key !== key) {
-      return null;
+  const getFilterDescription = () => {
+    switch (filterMode) {
+      case 'buy': return `Showing ${coins.length} coins with strong buy signals`;
+      case 'sell': return `Showing ${coins.length} coins with strong sell signals`;
+      default: return `Showing ${coins.length} of 1000+ coins`;
     }
-    return sortConfig.direction === 'ascending' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
-  };
-
-  const getChangeColor = (change: number) => {
-    return change >= 0 ? 'text-profit' : 'text-loss';
-  };
-
-  const getChangeIcon = (change: number) => {
-    return change >= 0 ? 
-      <TrendingUp className="w-4 h-4" /> : 
-      <TrendingDown className="w-4 h-4" />;
   };
 
   return (
-    <div className="glass-effect rounded-2xl p-6 border border-gray-700 shadow-lg">
+    <div className="glass-effect rounded-2xl p-6 border border-gray-700">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-          <TrendingUp className="w-6 h-6 text-accent" />
-          <span>Market Overview</span>
-        </h2>
-        <div className="relative w-64">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search coins..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-accent transition-all"
-          />
+        <div>
+          <h2 className="text-xl font-bold text-white">{getFilterTitle()}</h2>
+          <p className="text-gray-400 text-sm mt-1">{getFilterDescription()}</p>
+        </div>
+        <div className="text-sm text-gray-400 flex items-center space-x-2">
+          <Zap className="w-4 h-4 text-yellow-400" />
+          <span>Live</span>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th 
-                className="text-left py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
-                onClick={() => requestSort('symbol')}
-              >
-                Coin {getSortIcon('symbol')}
-              </th>
-              <th 
-                className="text-right py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
-                onClick={() => requestSort('price')}
-              >
-                Price {getSortIcon('price')}
-              </th>
-              <th 
-                className="text-right py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
-                onClick={() => requestSort('change24h')}
-              >
-                24h Change {getSortIcon('change24h')}
-              </th>
-              <th 
-                className="text-right py-3 px-4 text-gray-400 font-semibold cursor-pointer hover:text-white"
-                onClick={() => requestSort('volume')}
-              >
-                Volume {getSortIcon('volume')}
-              </th>
-              <th className="text-right py-3 px-4 text-gray-400 font-semibold">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCoins.map((coin) => (
-              <tr 
-                key={coin.symbol} 
-                className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer group"
-                onClick={() => setSelectedCoin(coin.symbol)}
-              >
-                <td className="py-3 px-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Star className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white">{coin.symbol.replace('USDT', '')}</div>
-                      <div className="text-gray-400 text-xs">USDT</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="text-right py-3 px-4">
-                  <div className="text-white font-mono">${formatPrice(coin.price)}</div>
-                </td>
-                <td className="text-right py-3 px-4">
-                  <div className={`flex items-center justify-end space-x-1 ${getChangeColor(coin.change24h)}`}>
-                    {getChangeIcon(coin.change24h)}
-                    <span className="font-semibold">
-                      {formatPercent(coin.change24h)}
-                    </span>
-                  </div>
-                </td>
-                <td className="text-right py-3 px-4">
-                  <div className="flex items-center justify-end space-x-1 text-gray-400">
-                    <Volume2 className="w-3 h-3" />
-                    <span className="text-sm">
-                      ${(coin.volume / 1000000).toFixed(1)}M
-                    </span>
-                  </div>
-                </td>
-                <td className="text-right py-3 px-4">
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                    coin.change24h >= 0 
-                      ? 'bg-green-900/30 text-profit border border-green-700' 
-                      : 'bg-red-900/30 text-loss border border-red-700'
+      <div className="space-y-2 max-h-96 overflow-y-auto">
+        {coins.map((coin, index) => (
+          <div
+            key={`${coin.symbol}-${index}`}
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group hover:scale-[1.02] ${
+              selectedCoin === coin.symbol
+                ? 'bg-accent/20 border-accent glow-effect'
+                : 'bg-secondary/50 border-gray-600 hover:border-gray-500'
+            }`}
+            onClick={() => onSelectCoin(coin)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${
+                    coin.change24h >= 0 ? 'bg-green-900/30' : 'bg-red-900/30'
                   }`}>
-                    {coin.change24h >= 0 ? 'BULLISH' : 'BEARISH'}
+                    {coin.change24h >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-profit" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-loss" />
+                    )}
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredCoins.length === 0 && (
-          <div className="text-center py-8 text-gray-400">
-            No coins found matching your search.
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-white text-sm">{coin.symbol}</h3>
+                        {coin.change24h > 10 && (
+                          <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                        )}
+                      </div>
+                      <span className={`text-sm font-bold ${
+                        coin.change24h >= 0 ? 'text-profit' : 'text-loss'
+                      }`}>
+                        {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-gray-400 text-xs">
+                        ${coin.price.toFixed(2)}
+                      </span>
+                      <span className="text-gray-400 text-xs">
+                        Vol: {formatNumber(coin.volume)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Additional Metrics */}
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <span className={`px-2 py-1 rounded ${
+                coin.volume > 50000000 ? 'bg-blue-900/30 text-blue-400' : 'bg-gray-700 text-gray-400'
+              }`}>
+                {coin.volume > 50000000 ? 'High Volume' : 'Normal'}
+              </span>
+              <span className={`px-2 py-1 rounded ${
+                Math.abs(coin.change24h) > 15 ? 'bg-purple-900/30 text-purple-400' : 'bg-gray-700 text-gray-400'
+              }`}>
+                {Math.abs(coin.change24h) > 15 ? 'High Volatility' : 'Stable'}
+              </span>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Selected Coin Info */}
-      {selectedCoin && (
-        <div className="mt-4 p-4 bg-secondary/50 rounded-xl border border-gray-600 shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-white">{selectedCoin}</h3>
-              <p className="text-gray-400 text-sm">Selected for analysis</p>
-            </div>
-            <div className="text-right">
-              <div className="text-white font-mono text-lg">
-                ${formatPrice(coins.find(c => c.symbol === selectedCoin)?.price || 0)}
-              </div>
-              <div className={getChangeColor(coins.find(c => c.symbol === selectedCoin)?.change24h || 0)}>
-                {formatPercent(coins.find(c => c.symbol === selectedCoin)?.change24h || 0)}
-              </div>
-            </div>
-          </div>
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={onLoadMore}
+            disabled={isLoading}
+            className="bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-semibold py-2 px-6 rounded-xl transition-colors flex items-center space-x-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <span>Load More Coins</span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {!hasMore && coins.length > 0 && (
+        <div className="mt-4 text-center text-gray-400 text-sm">
+          🎉 All {coins.length} coins loaded from 1000+ market
+        </div>
+      )}
+
+      {coins.length === 0 && (
+        <div className="text-center py-8 text-gray-400">
+          <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>No coins match current filter</p>
+          <p className="text-sm">Try changing your filter criteria</p>
         </div>
       )}
     </div>

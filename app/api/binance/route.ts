@@ -1,4 +1,3 @@
-// app/api/binance/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Binance from 'binance-api-node';
 
@@ -15,14 +14,12 @@ export async function GET(request: NextRequest) {
 
   try {
     let data;
-
     switch (action) {
       case 'price': {
         const ticker = await client.prices({ symbol: cleanSymbol });
         data = { price: parseFloat(ticker[cleanSymbol]) };
         break;
       }
-
       case 'klines': {
         const interval = searchParams.get('interval') || '1m';
         const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), 1000);
@@ -41,21 +38,36 @@ export async function GET(request: NextRequest) {
         }));
         break;
       }
-
       case 'all-prices': {
         data = await client.prices();
         break;
       }
-
       case '24hr': {
         data = await client.dailyStats({ symbol: cleanSymbol });
         break;
       }
-
+      case 'exchange-info': {
+        data = await client.exchangeInfo();
+        break;
+      }
+      case '24hr-multi': {
+        const symbolsParam = searchParams.get('symbols') || '';
+        const symbols = symbolsParam.split(',');
+        const stats = [];
+        for (const sym of symbols) {
+          try {
+            const stat = await client.dailyStats({ symbol: sym });
+            stats.push(stat);
+          } catch (e) {
+            // skip
+          }
+        }
+        data = stats;
+        break;
+      }
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('Binance API Error:', error);

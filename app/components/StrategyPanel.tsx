@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Zap, Cpu, TrendingUp, Repeat, CheckCircle, XCircle } from 'lucide-react';
+import { Zap, Cpu, TrendingUp, Repeat, CheckCircle, XCircle, Navigation, Activity, BarChart3 } from 'lucide-react';
 import { TradeSignal } from '../types';
 
 interface StrategyPanelProps {
@@ -34,6 +34,46 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
       color: 'text-purple-400',
       bgColor: 'bg-purple-900/20',
       borderColor: 'border-purple-700'
+    },
+    {
+      name: 'Volume-Weighted MACD',
+      description: 'MACD weighted by trading volume',
+      icon: <BarChart3 className="w-5 h-5" />,
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-900/20',
+      borderColor: 'border-orange-700'
+    },
+    {
+      name: 'Ichimoku Cloud',
+      description: 'Cloud-based trend analysis',
+      icon: <Cpu className="w-5 h-5" />,
+      color: 'text-pink-400',
+      bgColor: 'bg-pink-900/20',
+      borderColor: 'border-pink-700'
+    },
+    {
+      name: 'Supertrend Strategy',
+      description: 'ATR-based trend following',
+      icon: <Navigation className="w-5 h-5" />,
+      color: 'text-teal-400',
+      bgColor: 'bg-teal-900/20',
+      borderColor: 'border-teal-700'
+    },
+    {
+      name: 'Parabolic SAR',
+      description: 'Stop and reversal points',
+      icon: <Activity className="w-5 h-5" />,
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-900/20',
+      borderColor: 'border-yellow-700'
+    },
+    {
+      name: 'ADX Momentum',
+      description: 'Directional movement index',
+      icon: <TrendingUp className="w-5 h-5" />,
+      color: 'text-red-400',
+      bgColor: 'bg-red-900/20',
+      borderColor: 'border-red-700'
     }
   ];
 
@@ -41,7 +81,12 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
     const strategyMap: { [key: string]: string } = {
       'Multi-Timeframe RSI': 'Multi-timeframe RSI',
       'Trend Following MACD': 'Trend Following',
-      'Mean Reversion BB': 'Mean Reversion'
+      'Mean Reversion BB': 'Mean Reversion',
+      'Volume-Weighted MACD': 'Volume-Weighted MACD',
+      'Ichimoku Cloud': 'Ichimoku Cloud',
+      'Supertrend Strategy': 'Supertrend',
+      'Parabolic SAR': 'Parabolic SAR',
+      'ADX Momentum': 'ADX Momentum'
     };
     
     return signals.find(signal => 
@@ -69,7 +114,7 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {strategies.map((strategy, index) => {
           const signal = getStrategySignal(strategy.name);
           const isActive = activeStrategies.includes(strategy.name);
