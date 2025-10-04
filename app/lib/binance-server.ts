@@ -1,82 +1,105 @@
-// Server-side only Binance service (for API routes or server components)
-import Binance from 'binance-api-node';
+export interface BinanceKline {
+  openTime: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+  closeTime: number;
+  quoteAssetVolume: string;
+  numberOfTrades: number;
+  takerBuyBaseAssetVolume: string;
+  takerBuyQuoteAssetVolume: string;
+  ignore: string;
+}
 
-const client = Binance({
-  apiKey: process.env.BINANCE_API_KEY,
-  apiSecret: process.env.BINANCE_API_SECRET,
-});
+export interface BinanceTicker {
+  symbol: string;
+  priceChange: string;
+  priceChangePercent: string;
+  weightedAvgPrice: string;
+  prevClosePrice: string;
+  lastPrice: string;
+  lastQty: string;
+  bidPrice: string;
+  askPrice: string;
+  openPrice: string;
+  highPrice: string;
+  lowPrice: string;
+  volume: string;
+  quoteVolume: string;
+  openTime: number;
+  closeTime: number;
+  firstId: number;
+  lastId: number;
+  count: number;
+}
 
-export class BinanceServerService {
-  private static instance: BinanceServerService;
-  private client = client;
-
-  private constructor() {}
-
-  static getInstance(): BinanceServerService {
-    if (!BinanceServerService.instance) {
-      BinanceServerService.instance = new BinanceServerService();
-    }
-    return BinanceServerService.instance;
-  }
-
-  async getPrice(symbol: string): Promise<number> {
+export class BinanceServer {
+  static async getKlines(symbol: string, interval: string = '1m', limit: number = 100): Promise<BinanceKline[]> {
     try {
-      const ticker = await this.client.prices({ symbol });
-      return parseFloat(ticker[symbol]);
-    } catch (error) {
-      console.error(`Error fetching price for ${symbol}:`, error);
-      return 0;
-    }
-  }
-
-  async getAllPrices(): Promise<{ [key: string]: string }> {
-    try {
-      return await this.client.prices();
-    } catch (error) {
-      console.error('Error fetching all prices:', error);
-      return {};
-    }
-  }
-
-  async getKlines(symbol: string, interval: string, limit: number = 100) {
-    try {
-      const klines = await this.client.candles({
-        symbol: symbol.replace('/', '').toUpperCase(),
-        interval: interval as any,
-        limit
-      });
+      const response = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+      );
       
-      return klines.map(k => ({
-        open: parseFloat(k.open),
-        high: parseFloat(k.high),
-        low: parseFloat(k.low),
-        close: parseFloat(k.close),
-        volume: parseFloat(k.volume),
-        time: k.openTime
-      }));
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: unknown[] = await response.json();
+      
+      return data.map((item: unknown) => {
+        const kline = item as unknown[];
+        return {
+          openTime: Number(kline[0]),
+          open: String(kline[1]),
+          high: String(kline[2]),
+          low: String(kline[3]),
+          close: String(kline[4]),
+          volume: String(kline[5]),
+          closeTime: Number(kline[6]),
+          quoteAssetVolume: String(kline[7]),
+          numberOfTrades: Number(kline[8]),
+          takerBuyBaseAssetVolume: String(kline[9]),
+          takerBuyQuoteAssetVolume: String(kline[10]),
+          ignore: String(kline[11])
+        };
+      });
     } catch (error) {
-      console.error(`Error fetching klines for ${symbol}:`, error);
-      return [];
+      console.error('Failed to fetch klines:', error);
+      throw error;
     }
   }
 
-  async getExchangeInfo() {
+  static async getTicker(symbol: string): Promise<BinanceTicker> {
     try {
-      return await this.client.exchangeInfo();
+      const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: BinanceTicker = await response.json() as BinanceTicker;
+      return data;
     } catch (error) {
-      console.error('Error fetching exchange info:', error);
-      return null;
+      console.error('Failed to fetch ticker:', error);
+      throw error;
     }
   }
 
-  async get24hrStats(symbol: string) {
+  static async getExchangeInfo() {
     try {
-      return await this.client.dailyStats({ symbol });
+      const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.error(`Error fetching 24hr stats for ${symbol}:`, error);
-      return null;
+      console.error('Failed to fetch exchange info:', error);
+      throw error;
     }
   }
 }
-
-export default BinanceServerService.getInstance();

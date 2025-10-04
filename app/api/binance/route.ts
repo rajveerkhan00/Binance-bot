@@ -1,79 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Binance from 'binance-api-node';
 
-const client = Binance({
-  apiKey: process.env.BINANCE_API_KEY,
-  apiSecret: process.env.BINANCE_API_SECRET,
-});
+interface BinanceResponse {
+  symbols?: Array<{
+    symbol: string;
+    status: string;
+    baseAsset: string;
+    quoteAsset: string;
+  }>;
+  [key: string]: unknown;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
-  const symbol = searchParams.get('symbol') || 'BTCUSDT';
-  const cleanSymbol = symbol.replace('/', '').toUpperCase();
+  const symbol = searchParams.get('symbol');
+  const symbols = searchParams.get('symbols');
+  const interval = searchParams.get('interval') || '1m';
+  const limit = searchParams.get('limit') || '100';
 
   try {
-    let data;
     switch (action) {
-      case 'price': {
-        const ticker = await client.prices({ symbol: cleanSymbol });
-        data = { price: parseFloat(ticker[cleanSymbol]) };
-        break;
-      }
-      case 'klines': {
-        const interval = searchParams.get('interval') || '1m';
-        const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), 1000);
-        const klines = await client.candles({
-          symbol: cleanSymbol,
-          interval: interval as any,
-          limit,
-        });
-        data = klines.map(k => ({
-          open: parseFloat(k.open),
-          high: parseFloat(k.high),
-          low: parseFloat(k.low),
-          close: parseFloat(k.close),
-          volume: parseFloat(k.volume),
-          time: k.openTime,
-        }));
-        break;
-      }
-      case 'all-prices': {
-        data = await client.prices();
-        break;
-      }
-      case '24hr': {
-        data = await client.dailyStats({ symbol: cleanSymbol });
-        break;
-      }
       case 'exchange-info': {
-        data = await client.exchangeInfo();
-        break;
+        const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+        const data: BinanceResponse = await response.json();
+        
+        return NextResponse.json(data);
       }
+
+      case '24hr': {
+        if (!symbol) {
+          return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
+        }
+
+        const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
+        const data = await response.json();
+        
+        return NextResponse.json(data);
+      }
+
       case '24hr-multi': {
-        const symbolsParam = searchParams.get('symbols') || '';
-        const symbols = symbolsParam.split(',');
-        const stats = [];
-        for (const sym of symbols) {
+        if (!symbols) {
+          return NextResponse.json({ error: 'Symbols parameter is required' }, { status: 400 });
+        }
+
+        const symbolList = symbols.split(',');
+        const results = [];
+
+        for (const sym of symbolList) {
           try {
-            const stat = await client.dailyStats({ symbol: sym });
-            stats.push(stat);
-          } catch (e) {
-            // skip
+            const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym}`);
+            const data = await response.json();
+            results.push(data);
+          } catch (error) {
+            console.error(`Failed to fetch data for ${sym}:`, error);
+            // Continue with other symbols
           }
         }
-        data = stats;
-        break;
+
+        return NextResponse.json(results);
       }
+
+      case 'klines': {
+        if (!symbol) {
+          return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
+        }
+
+        const response = await fetch(
+          `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+        );
+        const data = await response.json();
+        
+        return NextResponse.json(data);
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error('Binance API Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch Binance data' },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error('Binance API error:', error);
+    return NextResponse.json({ error: 'Failed to fetch data from Binance' }, { status: 500 });
   }
 }

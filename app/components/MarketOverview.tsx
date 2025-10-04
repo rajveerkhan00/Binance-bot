@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react';
-import { CoinData } from '../types';
+import { TrendingUp, TrendingDown, Activity, Zap, Cpu, Target } from 'lucide-react';
+import { CoinData, TradeSignal } from '../types';
 
 interface MarketOverviewProps {
   coins: CoinData[];
+  allSignals: TradeSignal[];
 }
 
-const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
+const MarketOverview: React.FC<MarketOverviewProps> = ({ coins, allSignals }) => {
   const topGainers = coins
     .filter(coin => coin.change24h > 0)
     .sort((a, b) => b.change24h - a.change24h)
@@ -23,6 +24,12 @@ const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
     .filter(coin => coin.volume > 50000000)
     .slice(0, 5);
 
+  // Strategy statistics
+  const buySignals = allSignals.filter(s => s.action === 'BUY').length;
+  const sellSignals = allSignals.filter(s => s.action === 'SELL').length;
+  const totalStrategies = allSignals.length;
+  const consensus = totalStrategies > 0 ? (Math.max(buySignals, sellSignals) / totalStrategies) * 100 : 0;
+
   return (
     <div className="glass-effect rounded-2xl p-6 border border-gray-700">
       <div className="flex items-center justify-between mb-6">
@@ -36,6 +43,28 @@ const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
         </div>
       </div>
 
+      {/* Strategy Consensus Header */}
+      <div className="mb-6 bg-accent/10 rounded-xl p-4 border border-accent">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Cpu className="w-8 h-8 text-accent" />
+            <div>
+              <h3 className="text-lg font-semibold text-white">Multi-Strategy Consensus</h3>
+              <p className="text-gray-400 text-sm">{totalStrategies} strategies analyzing market</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className={`text-2xl font-bold ${
+              buySignals > sellSignals ? 'text-profit' : 
+              sellSignals > buySignals ? 'text-loss' : 'text-gray-400'
+            }`}>
+              {consensus.toFixed(0)}%
+            </div>
+            <div className="text-gray-400 text-sm">Agreement</div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Top Gainers */}
         <div className="bg-secondary/50 rounded-xl p-4 border border-gray-600">
@@ -45,7 +74,7 @@ const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
           </h3>
           <div className="space-y-2">
             {topGainers.map((coin, index) => (
-              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-700/30 rounded">
+              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-700/30 rounded transition-colors">
                 <span className="text-white text-sm">{coin.symbol}</span>
                 <span className="text-profit text-sm font-bold">+{coin.change24h.toFixed(2)}%</span>
               </div>
@@ -61,7 +90,7 @@ const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
           </h3>
           <div className="space-y-2">
             {topLosers.map((coin, index) => (
-              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-700/30 rounded">
+              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-700/30 rounded transition-colors">
                 <span className="text-white text-sm">{coin.symbol}</span>
                 <span className="text-loss text-sm font-bold">{coin.change24h.toFixed(2)}%</span>
               </div>
@@ -77,7 +106,7 @@ const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
           </h3>
           <div className="space-y-2">
             {highVolume.map((coin, index) => (
-              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-700/30 rounded">
+              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-700/30 rounded transition-colors">
                 <span className="text-white text-sm">{coin.symbol}</span>
                 <span className="text-blue-400 text-sm font-bold">
                   ${(coin.volume / 1000000).toFixed(1)}M
@@ -85,6 +114,22 @@ const MarketOverview: React.FC<MarketOverviewProps> = ({ coins }) => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Strategy Signal Summary */}
+      <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className="bg-blue-900/20 rounded-lg p-3 text-center border border-blue-700">
+          <div className="text-blue-400 text-sm">Buy Signals</div>
+          <div className="text-white font-bold text-xl">{buySignals}</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-600">
+          <div className="text-gray-400 text-sm">Total Strategies</div>
+          <div className="text-white font-bold text-xl">{totalStrategies}</div>
+        </div>
+        <div className="bg-red-900/20 rounded-lg p-3 text-center border border-red-700">
+          <div className="text-red-400 text-sm">Sell Signals</div>
+          <div className="text-white font-bold text-xl">{sellSignals}</div>
         </div>
       </div>
     </div>

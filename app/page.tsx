@@ -375,6 +375,10 @@ export default function HomePage() {
 
   const filteredCoins = computeFilteredCoins();
 
+  // Calculate total strategies and active strategies count
+  const totalStrategies = TradingStrategies.getAllStrategyNames().length;
+  const activeStrategyCount = allSignals.filter(s => s.action !== 'HOLD').length;
+
   if (isLoading && coins.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary to-gray-900 p-6">
@@ -416,6 +420,7 @@ export default function HomePage() {
                   signal={signal}
                   marketAnalysis={marketAnalysis}
                   onTradeExecute={handleTradeExecute}
+                  allSignals={allSignals} // ADDED MISSING PROP
                 />
                 <StrategyPanel 
                   signals={allSignals}
@@ -431,13 +436,15 @@ export default function HomePage() {
                   hasMore={hasMore}
                   isLoading={isLoading}
                   filterMode={filterMode}
+                  totalStrategies={totalStrategies} // ADDED MISSING PROP
+                  activeStrategies={activeStrategyCount} // ADDED MISSING PROP
                 />
               </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <TradeHistory trades={trades} />
-              <RiskManager />
+              <RiskManager allSignals={allSignals} /> {/* ADDED MISSING PROP */}
             </div>
           </>
         )}
@@ -459,13 +466,14 @@ export default function HomePage() {
           />
         )}
 
-        <MarketOverview coins={allCoins.slice(0, 50)} />
+        <MarketOverview coins={allCoins.slice(0, 50)} allSignals={allSignals} /> {/* ADDED MISSING PROP */}
 
         {showCoinDetails && selectedCoinDetails && (
           <CoinDetails 
             coin={selectedCoinDetails}
             onClose={() => setShowCoinDetails(false)}
             signal={signal}
+            allSignals={allSignals} // ADDED MISSING PROP
           />
         )}
 
@@ -490,7 +498,10 @@ export default function HomePage() {
                 <strong>{allCoins.length}</strong> Coins
               </span>
               <span className="text-gray-300">
-                <strong>{activeStrategies.length}</strong> Strategies
+                <strong>{totalStrategies}</strong> Strategies
+              </span>
+              <span className="text-gray-300">
+                <strong>{activeStrategyCount}</strong> Active
               </span>
               <span className="text-gray-300">
                 <strong>{trades.length}</strong> Trades

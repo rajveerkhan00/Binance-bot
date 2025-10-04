@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Plus, Minus, RefreshCw } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
 import { CoinData } from '../types';
 import { calculatePortfolioValue } from '../lib/utils';
 

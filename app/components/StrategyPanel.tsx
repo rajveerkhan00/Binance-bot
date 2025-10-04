@@ -1,9 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Zap, Cpu, TrendingUp, Repeat, CheckCircle, XCircle, Navigation, Activity, BarChart3 } from 'lucide-react';
-import { TradeSignal } from '../types';
+import { 
+  Zap, Cpu, TrendingUp, Repeat, CheckCircle, XCircle, Navigation, 
+  Activity, BarChart3, Waves, Target, GitBranch, Sparkles, 
+  Brain, Network, Satellite, Shield, Clock, Calendar,
+  Layers, PieChart, Sigma, Crosshair, DollarSign, Users,
+  BarChart, TrendingDown, Eye, Database, Cctv, Filter,
+  Wind, Sun, Moon, Star, Cloud, CloudRain, CloudSnow,
+  CloudLightning, CloudDrizzle, Thermometer, Droplets,
+  Umbrella, Tornado
+} from 'lucide-react';
 
+import { TradeSignal } from '../types/index';
 interface StrategyPanelProps {
   signals: TradeSignal[];
   activeStrategies: string[];
@@ -74,10 +83,235 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
       color: 'text-red-400',
       bgColor: 'bg-red-900/20',
       borderColor: 'border-red-700'
+    },
+    {
+      name: 'RSI Divergence',
+      description: 'Price and RSI divergence detection',
+      icon: <Waves className="w-5 h-5" />,
+      color: 'text-indigo-400',
+      bgColor: 'bg-indigo-900/20',
+      borderColor: 'border-indigo-700'
+    },
+    {
+      name: 'MACD Histogram',
+      description: 'MACD histogram momentum analysis',
+      icon: <BarChart className="w-5 h-5" />,
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-900/20',
+      borderColor: 'border-emerald-700'
+    },
+    {
+      name: 'Bollinger Squeeze',
+      description: 'Volatility breakout detection',
+      icon: <Target className="w-5 h-5" />,
+      color: 'text-cyan-400',
+      bgColor: 'bg-cyan-900/20',
+      borderColor: 'border-cyan-700'
+    },
+    {
+      name: 'Stochastic Oscillator',
+      description: 'Momentum and overbought/oversold levels',
+      icon: <GitBranch className="w-5 h-5" />,
+      color: 'text-violet-400',
+      bgColor: 'bg-violet-900/20',
+      borderColor: 'border-violet-700'
+    },
+    {
+      name: 'Williams %R',
+      description: 'Momentum oscillator for reversals',
+      icon: <TrendingDown className="w-5 h-5" />,
+      color: 'text-rose-400',
+      bgColor: 'bg-rose-900/20',
+      borderColor: 'border-rose-700'
+    },
+    {
+      name: 'CCI Strategy',
+      description: 'Commodity Channel Index cycles',
+      icon: <Sparkles className="w-5 h-5" />,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-900/20',
+      borderColor: 'border-amber-700'
+    },
+    {
+      name: 'ATR Breakout',
+      description: 'Average True Range volatility breakout',
+      icon: <Navigation className="w-5 h-5" />,
+      color: 'text-lime-400',
+      bgColor: 'bg-lime-900/20',
+      borderColor: 'border-lime-700'
+    },
+    {
+      name: 'VWAP Strategy',
+      description: 'Volume Weighted Average Price',
+      icon: <DollarSign className="w-5 h-5" />,
+      color: 'text-sky-400',
+      bgColor: 'bg-sky-900/20',
+      borderColor: 'border-sky-700'
+    },
+    {
+      name: 'Fibonacci Retracement',
+      description: 'Fibonacci levels for support/resistance',
+      icon: <Sigma className="w-5 h-5" />,
+      color: 'text-fuchsia-400',
+      bgColor: 'bg-fuchsia-900/20',
+      borderColor: 'border-fuchsia-700'
+    },
+    {
+      name: 'Pivot Points',
+      description: 'Daily pivot point analysis',
+      icon: <Crosshair className="w-5 h-5" />,
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-900/20',
+      borderColor: 'border-orange-700'
+    },
+    {
+      name: 'Moving Average Cross',
+      description: 'SMA crossovers for trend changes',
+      icon: <Layers className="w-5 h-5" />,
+      color: 'text-cyan-400',
+      bgColor: 'bg-cyan-900/20',
+      borderColor: 'border-cyan-700'
+    },
+    {
+      name: 'EMA Ribbon',
+      description: 'Multiple EMA alignment analysis',
+      icon: <PieChart className="w-5 h-5" />,
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-900/20',
+      borderColor: 'border-purple-700'
+    },
+    {
+      name: 'Price Action',
+      description: 'Pure price movement analysis',
+      icon: <Eye className="w-5 h-5" />,
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-900/20',
+      borderColor: 'border-gray-700'
+    },
+    {
+      name: 'Support Resistance',
+      description: 'Key level breakout/rejection',
+      icon: <Shield className="w-5 h-5" />,
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-900/20',
+      borderColor: 'border-blue-700'
+    },
+    {
+      name: 'Volume Profile',
+      description: 'Volume-based price levels',
+      icon: <Database className="w-5 h-5" />,
+      color: 'text-green-400',
+      bgColor: 'bg-green-900/20',
+      borderColor: 'border-green-700'
+    },
+    {
+      name: 'Order Flow',
+      description: 'Market depth and order analysis',
+      icon: <Filter className="w-5 h-5" />,
+      color: 'text-red-400',
+      bgColor: 'bg-red-900/20',
+      borderColor: 'border-red-700'
+    },
+    {
+      name: 'Market Structure',
+      description: 'Higher timeframe structure analysis',
+      icon: <Network className="w-5 h-5" />,
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-900/20',
+      borderColor: 'border-yellow-700'
+    },
+    {
+      name: 'Elliott Wave',
+      description: 'Wave pattern recognition',
+      icon: <Waves className="w-5 h-5" />,
+      color: 'text-indigo-400',
+      bgColor: 'bg-indigo-900/20',
+      borderColor: 'border-indigo-700'
+    },
+    {
+      name: 'Harmonic Patterns',
+      description: 'Geometric price patterns',
+      icon: <Satellite className="w-5 h-5" />,
+      color: 'text-pink-400',
+      bgColor: 'bg-pink-900/20',
+      borderColor: 'border-pink-700'
+    },
+    {
+      name: 'Deep Learning AI',
+      description: 'Neural network predictions',
+      icon: <Brain className="w-5 h-5" />,
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-900/20',
+      borderColor: 'border-emerald-700'
+    },
+    {
+      name: 'Neural Network',
+      description: 'AI-based pattern recognition',
+      icon: <Cpu className="w-5 h-5" />,
+      color: 'text-teal-400',
+      bgColor: 'bg-teal-900/20',
+      borderColor: 'border-teal-700'
+    },
+    {
+      name: 'Sentiment Analysis',
+      description: 'Market sentiment indicators',
+      icon: <Users className="w-5 h-5" />,
+      color: 'text-rose-400',
+      bgColor: 'bg-rose-900/20',
+      borderColor: 'border-rose-700'
+    },
+    {
+      name: 'Whale Tracking',
+      description: 'Large wallet movement tracking',
+      icon: <Cctv className="w-5 h-5" />,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-900/20',
+      borderColor: 'border-amber-700'
+    },
+    {
+      name: 'On-Chain Analysis',
+      description: 'Blockchain metrics analysis',
+      icon: <GitBranch className="w-5 h-5" />,
+      color: 'text-lime-400',
+      bgColor: 'bg-lime-900/20',
+      borderColor: 'border-lime-700'
+    },
+    {
+      name: 'Market Cycle',
+      description: 'Macro market cycle analysis',
+      icon: <Clock className="w-5 h-5" />,
+      color: 'text-sky-400',
+      bgColor: 'bg-sky-900/20',
+      borderColor: 'border-sky-700'
+    },
+    {
+      name: 'Seasonality',
+      description: 'Seasonal pattern analysis',
+      icon: <Calendar className="w-5 h-5" />,
+      color: 'text-fuchsia-400',
+      bgColor: 'bg-fuchsia-900/20',
+      borderColor: 'border-fuchsia-700'
+    },
+    {
+      name: 'Fear & Greed',
+      description: 'Market sentiment index',
+      icon: <Wind className="w-5 h-5" />,
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-900/20',
+      borderColor: 'border-orange-700'
+    },
+    {
+      name: 'Network Growth',
+      description: 'Blockchain network metrics',
+      icon: <Network className="w-5 h-5" />,
+      color: 'text-cyan-400',
+      bgColor: 'bg-cyan-900/20',
+      borderColor: 'border-cyan-700'
     }
   ];
 
   const getStrategySignal = (strategyName: string): TradeSignal | undefined => {
+    // Enhanced mapping to handle all strategy names
     const strategyMap: { [key: string]: string } = {
       'Multi-Timeframe RSI': 'Multi-timeframe RSI',
       'Trend Following MACD': 'Trend Following',
@@ -86,11 +320,41 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
       'Ichimoku Cloud': 'Ichimoku Cloud',
       'Supertrend Strategy': 'Supertrend',
       'Parabolic SAR': 'Parabolic SAR',
-      'ADX Momentum': 'ADX Momentum'
+      'ADX Momentum': 'ADX Momentum',
+      'RSI Divergence': 'RSI Divergence',
+      'MACD Histogram': 'MACD Histogram',
+      'Bollinger Squeeze': 'Bollinger Squeeze',
+      'Stochastic Oscillator': 'Stochastic',
+      'Williams %R': 'Williams %R',
+      'CCI Strategy': 'CCI',
+      'ATR Breakout': 'ATR Breakout',
+      'VWAP Strategy': 'VWAP',
+      'Fibonacci Retracement': 'Fibonacci',
+      'Pivot Points': 'Pivot Points',
+      'Moving Average Cross': 'MA Cross',
+      'EMA Ribbon': 'EMA Ribbon',
+      'Price Action': 'Price Action',
+      'Support Resistance': 'Support/Resistance',
+      'Volume Profile': 'Volume Profile',
+      'Order Flow': 'Order Flow',
+      'Market Structure': 'Market Structure',
+      'Elliott Wave': 'Elliott Wave',
+      'Harmonic Patterns': 'Harmonic Patterns',
+      'Deep Learning AI': 'Deep Learning AI',
+      'Neural Network': 'Neural Network',
+      'Sentiment Analysis': 'Sentiment Analysis',
+      'Whale Tracking': 'Whale Tracking',
+      'On-Chain Analysis': 'On-Chain Analysis',
+      'Market Cycle': 'Market Cycle',
+      'Seasonality': 'Seasonality',
+      'Fear & Greed': 'Fear & Greed',
+      'Network Growth': 'Network Growth'
     };
     
+    const searchTerm = strategyMap[strategyName] || strategyName;
     return signals.find(signal => 
-      signal.reason.includes(strategyMap[strategyName])
+      signal.reason.includes(searchTerm) || 
+      signal.reason.toLowerCase().includes(strategyName.toLowerCase())
     );
   };
 
@@ -110,11 +374,11 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
           <span>Trading Strategies</span>
         </h2>
         <div className="text-sm text-gray-400">
-          {activeStrategies.length} Active
+          {activeStrategies.length} Active / {strategies.length} Total
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto">
         {strategies.map((strategy, index) => {
           const signal = getStrategySignal(strategy.name);
           const isActive = activeStrategies.includes(strategy.name);
@@ -210,7 +474,7 @@ const StrategyPanel: React.FC<StrategyPanelProps> = ({ signals, activeStrategies
         
         <div className="mt-4 p-3 bg-accent/10 rounded-lg border border-accent">
           <div className="text-white text-sm text-center">
-            <strong>Final Decision:</strong> Based on weighted consensus of all active strategies
+            <strong>Final Decision:</strong> Based on weighted consensus of {signals.length} strategies
           </div>
         </div>
       </div>

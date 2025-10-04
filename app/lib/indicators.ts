@@ -112,4 +112,34 @@ export class TechnicalIndicators {
     
     return { value: k, signal, strength };
   }
+
+  // ADD THESE MISSING METHODS:
+  static calculateCCI(prices: number[], high: number[], low: number[], period: number = 20): number {
+    if (prices.length < period) return 0;
+    
+    const typicalPrices = prices.map((price, i) => (price + high[i] + low[i]) / 3);
+    const currentTypicalPrice = typicalPrices[typicalPrices.length - 1];
+    const sma = typicalPrices.slice(-period).reduce((sum, price) => sum + price, 0) / period;
+    
+    const meanDeviation = typicalPrices.slice(-period)
+      .reduce((sum, price) => sum + Math.abs(price - sma), 0) / period;
+    
+    return meanDeviation === 0 ? 0 : (currentTypicalPrice - sma) / (0.015 * meanDeviation);
+  }
+
+  static calculateATR(high: number[], low: number[], close: number[], period: number = 14): number {
+    if (high.length < period || low.length < period || close.length < period) {
+      return 0;
+    }
+
+    const trueRanges: number[] = [];
+    for (let i = 1; i < high.length; i++) {
+      const tr1 = high[i] - low[i];
+      const tr2 = Math.abs(high[i] - close[i - 1]);
+      const tr3 = Math.abs(low[i] - close[i - 1]);
+      trueRanges.push(Math.max(tr1, tr2, tr3));
+    }
+
+    return trueRanges.slice(-period).reduce((sum, tr) => sum + tr, 0) / period;
+  }
 }

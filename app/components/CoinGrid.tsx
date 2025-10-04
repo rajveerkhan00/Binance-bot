@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Loader, Star, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Loader, Star, Zap, Cpu } from 'lucide-react';
 import { CoinData } from '../types';
 import { formatNumber } from '../lib/utils';
 
@@ -13,6 +13,8 @@ interface CoinGridProps {
   hasMore: boolean;
   isLoading: boolean;
   filterMode: 'all' | 'buy' | 'sell';
+  totalStrategies: number;
+  activeStrategies: number;
 }
 
 const CoinGrid: React.FC<CoinGridProps> = ({ 
@@ -22,21 +24,23 @@ const CoinGrid: React.FC<CoinGridProps> = ({
   onLoadMore, 
   hasMore, 
   isLoading,
-  filterMode
+  filterMode,
+  totalStrategies,
+  activeStrategies
 }) => {
   const getFilterTitle = () => {
     switch (filterMode) {
-      case 'buy': return '100% Buy Signals (95%+ Confidence)';
-      case 'sell': return '100% Sell Signals (95%+ Confidence)';
+      case 'buy': return 'Strong Buy Signals';
+      case 'sell': return 'Strong Sell Signals';
       default: return 'All Market Coins';
     }
   };
 
   const getFilterDescription = () => {
     switch (filterMode) {
-      case 'buy': return `Showing ${coins.length} coins with strong buy signals`;
-      case 'sell': return `Showing ${coins.length} coins with strong sell signals`;
-      default: return `Showing ${coins.length} of 1000+ coins`;
+      case 'buy': return `Showing ${coins.length} coins with buy consensus`;
+      case 'sell': return `Showing ${coins.length} coins with sell consensus`;
+      default: return `Showing ${coins.length} of 1000+ coins analyzed by ${totalStrategies} strategies`;
     }
   };
 
@@ -48,8 +52,28 @@ const CoinGrid: React.FC<CoinGridProps> = ({
           <p className="text-gray-400 text-sm mt-1">{getFilterDescription()}</p>
         </div>
         <div className="text-sm text-gray-400 flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
+            <Cpu className="w-4 h-4 text-accent" />
+            <span>{activeStrategies}/{totalStrategies}</span>
+          </div>
           <Zap className="w-4 h-4 text-yellow-400" />
           <span>Live</span>
+        </div>
+      </div>
+
+      {/* Strategy Status */}
+      <div className="mb-4 bg-secondary/30 rounded-lg p-3 border border-gray-600">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-400">Strategy Coverage:</span>
+          <span className="text-white font-semibold">
+            {activeStrategies} of {totalStrategies} strategies active
+          </span>
+        </div>
+        <div className="mt-1 w-full bg-gray-600 rounded-full h-2">
+          <div 
+            className="bg-accent rounded-full h-2 transition-all duration-500"
+            style={{ width: `${(activeStrategies / totalStrategies) * 100}%` }}
+          ></div>
         </div>
       </div>
 

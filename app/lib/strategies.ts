@@ -318,7 +318,6 @@ export class TradingStrategies {
     };
   }
 
-  // Advanced Strategies (6-20)
   static supertrendStrategy(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
     if (prices.length < 20) {
       return {
@@ -339,7 +338,6 @@ export class TradingStrategies {
     let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 0;
 
-    // Simplified Supertrend logic
     const sma10 = TechnicalIndicators.calculateSMA(prices, 10);
     const sma20 = TechnicalIndicators.calculateSMA(prices, 20);
     
@@ -388,7 +386,6 @@ export class TradingStrategies {
     let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 0;
 
-    // Check if price is above/below recent highs/lows for trend direction
     const recentHigh = Math.max(...high.slice(-5));
     const recentLow = Math.min(...low.slice(-5));
 
@@ -437,7 +434,6 @@ export class TradingStrategies {
     let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 0;
 
-    // Simplified ADX + DI calculation
     const recentTrend = currentPrice > prices[prices.length - 5] ? 'UP' : 'DOWN';
     const volatility = Math.abs((currentPrice - prices[prices.length - 5]) / prices[prices.length - 5]);
 
@@ -466,9 +462,6 @@ export class TradingStrategies {
     };
   }
 
-  // Add 42 more strategy methods following the same pattern...
-  // For brevity, I'll show a few more examples:
-
   static rsiDivergence(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
     const rsi = TechnicalIndicators.calculateRSI(prices, 14);
     const currentPrice = prices[prices.length - 1];
@@ -476,7 +469,6 @@ export class TradingStrategies {
     let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 0;
 
-    // Simplified divergence detection
     if (rsi.value < 30 && currentPrice > prices[prices.length - 5]) {
       action = 'BUY';
       confidence = 0.7;
@@ -502,6 +494,38 @@ export class TradingStrategies {
     };
   }
 
+  static macdHistogram(prices: number[], symbol: string): TradeSignal {
+    const macd = TechnicalIndicators.calculateMACD(prices);
+    const currentPrice = prices[prices.length - 1];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (macd.histogram > 0 && macd.histogram > macd.signal * 0.5) {
+      action = 'BUY';
+      confidence = Math.min(Math.abs(macd.histogram) * 150, 0.8);
+    } else if (macd.histogram < 0 && macd.histogram < macd.signal * 0.5) {
+      action = 'SELL';
+      confidence = Math.min(Math.abs(macd.histogram) * 150, 0.8);
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.98 : currentPrice * 1.02;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.04 : currentPrice * 0.96;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '30m-2h',
+      reason: `MACD Histogram: ${macd.histogram > 0 ? 'Bullish' : 'Bearish'} momentum`,
+      stopLoss,
+      takeProfit,
+      leverage: 4
+    };
+  }
+
   static bollingerSqueeze(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
     const bb = TechnicalIndicators.calculateBollingerBands(prices, 20);
     const currentPrice = prices[prices.length - 1];
@@ -510,7 +534,7 @@ export class TradingStrategies {
     let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 0;
 
-    if (bbWidth < 0.1) { // Squeeze condition
+    if (bbWidth < 0.1) {
       if (currentPrice > bb.middle) {
         action = 'BUY';
         confidence = 0.8;
@@ -537,7 +561,643 @@ export class TradingStrategies {
     };
   }
 
-  // Continue with remaining strategies...
+  static stochasticOscillator(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const stochastic = TechnicalIndicators.calculateStochastic(prices, high, low, 14);
+    const currentPrice = prices[prices.length - 1];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (stochastic.value < 20) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (stochastic.value > 80) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.99 : currentPrice * 1.01;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.03 : currentPrice * 0.97;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '15m-1h',
+      reason: `Stochastic: ${stochastic.value.toFixed(1)}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static williamsR(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const highestHigh = Math.max(...high.slice(-14));
+    const lowestLow = Math.min(...low.slice(-14));
+    const williamsR = ((highestHigh - currentPrice) / (highestHigh - lowestLow)) * -100;
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (williamsR < -80) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (williamsR > -20) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.99 : currentPrice * 1.01;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.03 : currentPrice * 0.97;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '15m-1h',
+      reason: `Williams %R: ${williamsR.toFixed(1)}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static cciStrategy(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const cci = TechnicalIndicators.calculateCCI(prices, high, low, 20);
+    const currentPrice = prices[prices.length - 1];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (cci < -100) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (cci > 100) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.99 : currentPrice * 1.01;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.03 : currentPrice * 0.97;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '30m-2h',
+      reason: `CCI: ${cci.toFixed(1)}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static atrBreakout(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const atr = TechnicalIndicators.calculateATR(high, low, prices, 14);
+    const currentPrice = prices[prices.length - 1];
+    const prevPrice = prices[prices.length - 2];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice > prevPrice + atr) {
+      action = 'BUY';
+      confidence = 0.75;
+    } else if (currentPrice < prevPrice - atr) {
+      action = 'SELL';
+      confidence = 0.75;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice - (atr * 1.5) : currentPrice + (atr * 1.5);
+    const takeProfit = action === 'BUY' ? currentPrice + (atr * 2) : currentPrice - (atr * 2);
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '1h-4h',
+      reason: `ATR Breakout: ${(atr / currentPrice * 100).toFixed(2)}% volatility`,
+      stopLoss,
+      takeProfit,
+      leverage: 4
+    };
+  }
+
+  static vwapStrategy(prices: number[], volumes: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    if (prices.length < 20 || volumes.length < 20) {
+      return {
+        symbol,
+        action: 'HOLD',
+        confidence: 0,
+        price: prices[prices.length - 1],
+        timestamp: new Date(),
+        duration: 'N/A',
+        reason: 'Insufficient data for VWAP',
+        stopLoss: 0,
+        takeProfit: 0,
+        leverage: 1
+      };
+    }
+
+    const currentPrice = prices[prices.length - 1];
+    const typicalPrices = prices.map((p, i) => (p + high[i] + low[i]) / 3);
+    const vwap = typicalPrices.reduce((sum, tp, i) => sum + (tp * volumes[i]), 0) / volumes.reduce((sum, vol) => sum + vol, 0);
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice > vwap * 1.01) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (currentPrice < vwap * 0.99) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? vwap : vwap;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.02 : currentPrice * 0.98;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '1h-4h',
+      reason: `VWAP: Price ${currentPrice > vwap ? 'above' : 'below'} VWAP`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static fibonacciRetracement(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const recentHigh = Math.max(...high.slice(-20));
+    const recentLow = Math.min(...low.slice(-20));
+    const diff = recentHigh - recentLow;
+    
+    const level236 = recentHigh - (diff * 0.236);
+    const level382 = recentHigh - (diff * 0.382);
+    const level500 = recentHigh - (diff * 0.5);
+    const level618 = recentHigh - (diff * 0.618);
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice <= level618 && currentPrice > recentLow) {
+      action = 'BUY';
+      confidence = 0.8;
+    } else if (currentPrice >= level236 && currentPrice < recentHigh) {
+      action = 'SELL';
+      confidence = 0.8;
+    }
+
+    const stopLoss = action === 'BUY' ? recentLow : recentHigh;
+    const takeProfit = action === 'BUY' ? level382 : level500;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '4h-1d',
+      reason: `Fibonacci: ${action === 'BUY' ? 'Support' : 'Resistance'} level`,
+      stopLoss,
+      takeProfit,
+      leverage: 2
+    };
+  }
+
+  static pivotPoints(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const prevHigh = high[high.length - 2] || currentPrice;
+    const prevLow = low[low.length - 2] || currentPrice;
+    const prevClose = prices[prices.length - 2] || currentPrice;
+    
+    const pivot = (prevHigh + prevLow + prevClose) / 3;
+    const r1 = (2 * pivot) - prevLow;
+    const s1 = (2 * pivot) - prevHigh;
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice > r1) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (currentPrice < s1) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? pivot : pivot;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.02 : currentPrice * 0.98;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '1h-4h',
+      reason: `Pivot Points: ${action === 'BUY' ? 'Above R1' : 'Below S1'}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static movingAverageCross(prices: number[], symbol: string): TradeSignal {
+    const sma10 = TechnicalIndicators.calculateSMA(prices, 10);
+    const sma20 = TechnicalIndicators.calculateSMA(prices, 20);
+    const currentPrice = prices[prices.length - 1];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (sma10 > sma20) {
+      action = 'BUY';
+      confidence = 0.75;
+    } else if (sma10 < sma20) {
+      action = 'SELL';
+      confidence = 0.75;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.98 : currentPrice * 1.02;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.04 : currentPrice * 0.96;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '30m-2h',
+      reason: `MA Cross: SMA10 ${sma10 > sma20 ? 'above' : 'below'} SMA20`,
+      stopLoss,
+      takeProfit,
+      leverage: 4
+    };
+  }
+
+  static emaRibbon(prices: number[], symbol: string): TradeSignal {
+    const ema8 = TechnicalIndicators.calculateEMA(prices, 8);
+    const ema13 = TechnicalIndicators.calculateEMA(prices, 13);
+    const ema21 = TechnicalIndicators.calculateEMA(prices, 21);
+    const ema34 = TechnicalIndicators.calculateEMA(prices, 34);
+    const currentPrice = prices[prices.length - 1];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (ema8 > ema13 && ema13 > ema21 && ema21 > ema34) {
+      action = 'BUY';
+      confidence = 0.8;
+    } else if (ema8 < ema13 && ema13 < ema21 && ema21 < ema34) {
+      action = 'SELL';
+      confidence = 0.8;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.97 : currentPrice * 1.03;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.05 : currentPrice * 0.95;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '1h-4h',
+      reason: `EMA Ribbon: ${action === 'BUY' ? 'Bullish alignment' : 'Bearish alignment'}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static priceAction(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const prevPrice = prices[prices.length - 2];
+    const prevPrevPrice = prices[prices.length - 3];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice > prevPrice && prevPrice > prevPrevPrice) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (currentPrice < prevPrice && prevPrice < prevPrevPrice) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? prevPrevPrice : prevPrevPrice;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.03 : currentPrice * 0.97;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '15m-1h',
+      reason: `Price Action: ${action === 'BUY' ? 'Higher highs' : 'Lower lows'}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static supportResistance(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const recentHigh = Math.max(...high.slice(-10));
+    const recentLow = Math.min(...low.slice(-10));
+    const resistance = recentHigh * 0.99;
+    const support = recentLow * 1.01;
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice <= support) {
+      action = 'BUY';
+      confidence = 0.75;
+    } else if (currentPrice >= resistance) {
+      action = 'SELL';
+      confidence = 0.75;
+    }
+
+    const stopLoss = action === 'BUY' ? recentLow : recentHigh;
+    const takeProfit = action === 'BUY' ? resistance : support;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '1h-4h',
+      reason: `Support/Resistance: ${action === 'BUY' ? 'Bounce from support' : 'Rejection at resistance'}`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static volumeProfile(prices: number[], volumes: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+    const currentVolume = volumes[volumes.length - 1];
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentVolume > avgVolume * 1.5 && currentPrice > prices[prices.length - 2]) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (currentVolume > avgVolume * 1.5 && currentPrice < prices[prices.length - 2]) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.99 : currentPrice * 1.01;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.03 : currentPrice * 0.97;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '15m-1h',
+      reason: `Volume Profile: ${(currentVolume / avgVolume).toFixed(1)}x avg volume`,
+      stopLoss,
+      takeProfit,
+      leverage: 3
+    };
+  }
+
+  static orderFlow(prices: number[], volumes: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const priceChange = currentPrice - prices[prices.length - 2];
+    const volumeChange = volumes[volumes.length - 1] - (volumes[volumes.length - 2] || volumes[volumes.length - 1]);
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (priceChange > 0 && volumeChange > 0) {
+      action = 'BUY';
+      confidence = 0.7;
+    } else if (priceChange < 0 && volumeChange > 0) {
+      action = 'SELL';
+      confidence = 0.7;
+    }
+
+    const stopLoss = action === 'BUY' ? currentPrice * 0.995 : currentPrice * 1.005;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.015 : currentPrice * 0.985;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '5m-15m',
+      reason: `Order Flow: ${priceChange > 0 ? 'Bullish' : 'Bearish'} with volume`,
+      stopLoss,
+      takeProfit,
+      leverage: 5
+    };
+  }
+
+  static marketStructure(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    const currentPrice = prices[prices.length - 1];
+    const sma50 = TechnicalIndicators.calculateSMA(prices, 50);
+    const sma200 = TechnicalIndicators.calculateSMA(prices, 200);
+    
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    let confidence = 0;
+
+    if (currentPrice > sma50 && sma50 > sma200) {
+      action = 'BUY';
+      confidence = 0.8;
+    } else if (currentPrice < sma50 && sma50 < sma200) {
+      action = 'SELL';
+      confidence = 0.8;
+    }
+
+    const stopLoss = action === 'BUY' ? sma200 : sma200;
+    const takeProfit = action === 'BUY' ? currentPrice * 1.1 : currentPrice * 0.9;
+
+    return {
+      symbol,
+      action,
+      confidence: action === 'HOLD' ? 0 : confidence,
+      price: currentPrice,
+      timestamp: new Date(),
+      duration: '1d-1w',
+      reason: `Market Structure: ${action === 'BUY' ? 'Bull market' : 'Bear market'}`,
+      stopLoss,
+      takeProfit,
+      leverage: 2
+    };
+  }
+
+  static elliottWave(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Elliott Wave analysis requires manual pattern recognition');
+  }
+
+  static harmonicPatterns(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Harmonic patterns require manual pattern recognition');
+  }
+
+  static gartleyPattern(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Gartley pattern requires manual identification');
+  }
+
+  static butterflyPattern(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Butterfly pattern requires manual identification');
+  }
+
+  static batPattern(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Bat pattern requires manual identification');
+  }
+
+  static crabPattern(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Crab pattern requires manual identification');
+  }
+
+  static cypherPattern(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Cypher pattern requires manual identification');
+  }
+
+  static deepLearningAI(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Deep Learning AI requires trained model');
+  }
+
+  static neuralNetwork(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Neural Network requires trained model');
+  }
+
+  static geneticAlgorithm(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Genetic Algorithm requires optimization');
+  }
+
+  static reinforcementLearning(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Reinforcement Learning requires trained agent');
+  }
+
+  static sentimentAnalysis(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Sentiment Analysis requires external data');
+  }
+
+  static socialVolume(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Social Volume requires social media data');
+  }
+
+  static whaleTracking(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Whale Tracking requires on-chain data');
+  }
+
+  static liquidityAnalysis(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Liquidity Analysis requires order book data');
+  }
+
+  static marketCycle(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Market Cycle requires long-term data');
+  }
+
+  static seasonality(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Seasonality requires historical seasonal data');
+  }
+
+  static correlationMatrix(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Correlation Matrix requires multiple assets');
+  }
+
+  static volatilitySmile(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Volatility Smile requires options data');
+  }
+
+  static gammaExposure(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Gamma Exposure requires options flow data');
+  }
+
+  static deltaNeutral(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Delta Neutral requires options positions');
+  }
+
+  static optionsFlow(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Options Flow requires options market data');
+  }
+
+  static fundingRate(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Funding Rate requires perpetual swap data');
+  }
+
+  static openInterest(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Open Interest requires futures market data');
+  }
+
+  static leverageRatio(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Leverage Ratio requires margin trading data');
+  }
+
+  static fearGreed(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Fear & Greed requires sentiment indicators');
+  }
+
+  static networkGrowth(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Network Growth requires blockchain data');
+  }
+
+  static onChainAnalysis(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'On-Chain Analysis requires blockchain metrics');
+  }
+
+  static mvrvZScore(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'MVRV Z-Score requires market value vs realized value data');
+  }
+
+  static nvtRatio(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'NVT Ratio requires network value to transaction ratio');
+  }
+
+  static stockToFlow(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Stock-to-Flow requires supply issuance data');
+  }
+
+  static realizedPrice(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Realized Price requires UTXO age data');
+  }
+
+  static coinDaysDestroyed(prices: number[], high: number[], low: number[], symbol: string): TradeSignal {
+    return this.createHoldSignal(prices, symbol, 'Coin Days Destroyed requires coin movement data');
+  }
+
+  private static createHoldSignal(prices: number[], symbol: string, reason: string): TradeSignal {
+    return {
+      symbol,
+      action: 'HOLD',
+      confidence: 0,
+      price: prices[prices.length - 1],
+      timestamp: new Date(),
+      duration: 'N/A',
+      reason,
+      stopLoss: 0,
+      takeProfit: 0,
+      leverage: 1
+    };
+  }
 
   static analyzeMarket(prices: number[], high: number[], low: number[]): MarketAnalysis {
     const rsi = TechnicalIndicators.calculateRSI(prices, 14);
@@ -580,7 +1240,6 @@ export class TradingStrategies {
   static getAllSignals(prices: number[], high: number[], low: number[], symbol: string): TradeSignal[] {
     const volumes = Array(prices.length).fill(1);
     
-    // Return signals from all 50+ strategies
     return [
       this.multiTimeframeRSI(prices, high, low, symbol),
       this.trendFollowingMACD(prices, symbol),
@@ -591,8 +1250,55 @@ export class TradingStrategies {
       this.parabolicSAR(prices, high, low, symbol),
       this.adxMomentum(prices, high, low, symbol),
       this.rsiDivergence(prices, high, low, symbol),
+      this.macdHistogram(prices, symbol),
       this.bollingerSqueeze(prices, high, low, symbol),
-      // Add more strategy calls here...
+      this.stochasticOscillator(prices, high, low, symbol),
+      this.williamsR(prices, high, low, symbol),
+      this.cciStrategy(prices, high, low, symbol),
+      this.atrBreakout(prices, high, low, symbol),
+      this.vwapStrategy(prices, volumes, high, low, symbol),
+      this.fibonacciRetracement(prices, high, low, symbol),
+      this.pivotPoints(prices, high, low, symbol),
+      this.movingAverageCross(prices, symbol),
+      this.emaRibbon(prices, symbol),
+      this.priceAction(prices, high, low, symbol),
+      this.supportResistance(prices, high, low, symbol),
+      this.volumeProfile(prices, volumes, symbol),
+      this.orderFlow(prices, volumes, symbol),
+      this.marketStructure(prices, high, low, symbol),
+      this.elliottWave(prices, high, low, symbol),
+      this.harmonicPatterns(prices, high, low, symbol),
+      this.gartleyPattern(prices, high, low, symbol),
+      this.butterflyPattern(prices, high, low, symbol),
+      this.batPattern(prices, high, low, symbol),
+      this.crabPattern(prices, high, low, symbol),
+      this.cypherPattern(prices, high, low, symbol),
+      this.deepLearningAI(prices, high, low, symbol),
+      this.neuralNetwork(prices, high, low, symbol),
+      this.geneticAlgorithm(prices, high, low, symbol),
+      this.reinforcementLearning(prices, high, low, symbol),
+      this.sentimentAnalysis(prices, high, low, symbol),
+      this.socialVolume(prices, high, low, symbol),
+      this.whaleTracking(prices, high, low, symbol),
+      this.liquidityAnalysis(prices, high, low, symbol),
+      this.marketCycle(prices, high, low, symbol),
+      this.seasonality(prices, high, low, symbol),
+      this.correlationMatrix(prices, high, low, symbol),
+      this.volatilitySmile(prices, high, low, symbol),
+      this.gammaExposure(prices, high, low, symbol),
+      this.deltaNeutral(prices, high, low, symbol),
+      this.optionsFlow(prices, high, low, symbol),
+      this.fundingRate(prices, high, low, symbol),
+      this.openInterest(prices, high, low, symbol),
+      this.leverageRatio(prices, high, low, symbol),
+      this.fearGreed(prices, high, low, symbol),
+      this.networkGrowth(prices, high, low, symbol),
+      this.onChainAnalysis(prices, high, low, symbol),
+      this.mvrvZScore(prices, high, low, symbol),
+      this.nvtRatio(prices, high, low, symbol),
+      this.stockToFlow(prices, high, low, symbol),
+      this.realizedPrice(prices, high, low, symbol),
+      this.coinDaysDestroyed(prices, high, low, symbol)
     ].filter(signal => signal !== null);
   }
 

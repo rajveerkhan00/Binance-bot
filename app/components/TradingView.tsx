@@ -1,284 +1,205 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Play, Square, TrendingUp, AlertTriangle, Target, Clock, DollarSign } from 'lucide-react';
-import { TradeSignal, TradeHistory, MarketAnalysis } from '../types';
-import { formatPrice, formatPercent, calculatePnL, generateId } from '../lib/utils';
+import React from 'react';
+import { LineChart, Play, BarChart3, Cpu } from 'lucide-react';
+import { TradeSignal, MarketAnalysis } from '../types';
 
 interface TradingViewProps {
   signal: TradeSignal;
   marketAnalysis: MarketAnalysis;
-  onTradeExecute: (trade: TradeHistory) => void;
+  onTradeExecute: (trade: any) => void;
+  allSignals: TradeSignal[];
 }
 
 const TradingView: React.FC<TradingViewProps> = ({ 
   signal, 
   marketAnalysis, 
-  onTradeExecute 
+  onTradeExecute,
+  allSignals
 }) => {
-  const [isTrading, setIsTrading] = useState(false);
-  const [currentTrade, setCurrentTrade] = useState<TradeHistory | null>(null);
-  const [tradeStartTime, setTradeStartTime] = useState<Date | null>(null);
-  const [currentDuration, setCurrentDuration] = useState<string>('0s');
-  const [currentPnL, setCurrentPnL] = useState(0);
+  const generatePriceData = () => {
+    return Array.from({ length: 50 }, (_, i) => ({
+      time: i,
+      price: signal.price * (1 + Math.sin(i * 0.2) * 0.1 + (Math.random() - 0.5) * 0.02)
+    }));
+  };
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isTrading && tradeStartTime && currentTrade) {
-      interval = setInterval(() => {
-        const duration = Date.now() - tradeStartTime.getTime();
-        const seconds = Math.floor(duration / 1000);
-        const minutes = Math.floor(seconds / 60);
-        setCurrentDuration(minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`);
-        
-        // Calculate real-time PnL
-        const isLong = currentTrade.action === 'BUY';
-        const { pnl } = calculatePnL(
-          currentTrade.entryPrice,
-          signal.price,
-          currentTrade.quantity,
-          signal.leverage,
-          isLong
-        );
-        setCurrentPnL(pnl);
-      }, 1000);
-    }
+  const priceData = generatePriceData();
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTrading, tradeStartTime, currentTrade, signal.price]);
-
-  const handleStartTrade = () => {
-    if (signal.action === 'HOLD' || signal.confidence < 0.6) {
-      alert('🚫 Low confidence signal. Wait for better opportunity.');
-      return;
-    }
-
-    const trade: TradeHistory = {
-      id: generateId(),
+  const handleExecuteTrade = () => {
+    const trade = {
+      id: Date.now().toString(),
       symbol: signal.symbol,
       action: signal.action,
       entryPrice: signal.price,
-      exitPrice: signal.price,
-      quantity: 0.001,
-      pnl: 0,
-      pnlPercent: 0,
-      duration: '0s',
-      status: 'OPEN',
+      quantity: 0.1,
       timestamp: new Date(),
-      strategy: 'AI Consensus'
+      status: 'OPEN' as const
     };
-
-    setCurrentTrade(trade);
-    setIsTrading(true);
-    setTradeStartTime(new Date());
-    setCurrentPnL(0);
+    onTradeExecute(trade);
   };
 
-  const handleCloseTrade = () => {
-    if (!currentTrade) return;
-
-    const exitPrice = signal.price;
-    const isLong = currentTrade.action === 'BUY';
-    const { pnl, pnlPercent } = calculatePnL(
-      currentTrade.entryPrice,
-      exitPrice,
-      currentTrade.quantity,
-      signal.leverage,
-      isLong
-    );
-
-    const closedTrade: TradeHistory = {
-      ...currentTrade,
-      exitPrice,
-      pnl,
-      pnlPercent,
-      duration: currentDuration,
-      status: pnl >= 0 ? 'WIN' : 'LOSS'
-    };
-
-    onTradeExecute(closedTrade);
-    setCurrentTrade(null);
-    setIsTrading(false);
-    setTradeStartTime(null);
-    setCurrentDuration('0s');
-    setCurrentPnL(0);
+  // Strategy breakdown
+  const strategyBreakdown = {
+    buy: allSignals.filter(s => s.action === 'BUY').length,
+    sell: allSignals.filter(s => s.action === 'SELL').length,
+    hold: allSignals.filter(s => s.action === 'HOLD').length,
+    total: allSignals.length
   };
 
-  const getTrendColor = (trend: string) => {
-    switch (trend) {
-      case 'BULLISH': return 'text-profit';
-      case 'BEARISH': return 'text-loss';
-      default: return 'text-yellow-400';
-    }
-  };
-
-  const getRSIColor = (rsi: number) => {
-    if (rsi < 30) return 'text-profit';
-    if (rsi > 70) return 'text-loss';
-    return 'text-yellow-400';
-  };
+  const highConfidenceSignals = allSignals.filter(s => s.confidence >= 0.8).length;
 
   return (
     <div className="glass-effect rounded-2xl p-6 border border-gray-700">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">Trading Dashboard</h2>
-        <div className="flex items-center space-x-4">
-          <div className={`px-3 py-1 rounded-full ${getTrendColor(marketAnalysis.trend)} bg-opacity-20 border ${getTrendColor(marketAnalysis.trend)} border-opacity-30`}>
-            {marketAnalysis.trend} Market
+        <h2 className="text-xl font-bold text-white flex items-center space-x-2">
+          <LineChart className="w-6 h-6 text-accent" />
+          <span>Trading View - {signal.symbol}</span>
+        </h2>
+        <div className="flex items-center space-x-3">
+          <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
+            signal.action === 'BUY' ? 'bg-profit text-white' : 
+            signal.action === 'SELL' ? 'bg-loss text-white' : 'bg-gray-600 text-gray-300'
+          }`}>
+            {signal.action} ({(signal.confidence * 100).toFixed(1)}%)
           </div>
-          <div className="text-sm text-gray-400">
-            Strength: {(marketAnalysis.strength * 100).toFixed(0)}%
+          <button
+            onClick={handleExecuteTrade}
+            disabled={signal.action === 'HOLD'}
+            className="bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <Play className="w-4 h-4" />
+            <span>Execute Trade</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Strategy Consensus */}
+      <div className="mb-6 bg-secondary/50 rounded-xl p-4 border border-gray-600">
+        <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+          <Cpu className="w-5 h-5 mr-2 text-accent" />
+          Multi-Strategy Analysis ({strategyBreakdown.total} Strategies)
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-700 text-center">
+            <div className="text-blue-400 text-sm">Buy Signals</div>
+            <div className="text-white font-bold text-xl">{strategyBreakdown.buy}</div>
+          </div>
+          <div className="p-3 bg-gray-800 rounded-lg border border-gray-600 text-center">
+            <div className="text-gray-400 text-sm">Hold Signals</div>
+            <div className="text-white font-bold text-xl">{strategyBreakdown.hold}</div>
+          </div>
+          <div className="p-3 bg-red-900/20 rounded-lg border border-red-700 text-center">
+            <div className="text-red-400 text-sm">Sell Signals</div>
+            <div className="text-white font-bold text-xl">{strategyBreakdown.sell}</div>
+          </div>
+          <div className="p-3 bg-green-900/20 rounded-lg border border-green-700 text-center">
+            <div className="text-green-400 text-sm">High Confidence</div>
+            <div className="text-white font-bold text-xl">{highConfidenceSignals}</div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Left Column - Market Analysis */}
-        <div className="space-y-4">
-          <div className="bg-secondary/50 rounded-xl p-4 border border-gray-600">
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
-              <Target className="w-5 h-5 text-blue-400" />
-              <span>Market Analysis</span>
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">RSI (14)</span>
-                <span className={getRSIColor(marketAnalysis.rsi)}>
-                  {marketAnalysis.rsi.toFixed(1)}
-                  {marketAnalysis.rsi < 30 && ' (Oversold)'}
-                  {marketAnalysis.rsi > 70 && ' (Overbought)'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">MACD Histogram</span>
-                <span className={marketAnalysis.macd.histogram > 0 ? 'text-profit' : 'text-loss'}>
-                  {marketAnalysis.macd.histogram.toFixed(4)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Volatility</span>
-                <span className="text-yellow-400">{marketAnalysis.volatility.toFixed(2)}%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Trend Strength</span>
-                <div className="w-24 bg-gray-600 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${getTrendColor(marketAnalysis.trend)}`}
-                    style={{ width: `${marketAnalysis.strength * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+      {/* Price Chart */}
+      <div className="bg-secondary/50 rounded-xl p-4 mb-6 border border-gray-600">
+        <div className="h-64 relative">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-full h-48 relative">
+              <svg className="w-full h-full" viewBox="0 0 400 200">
+                <path
+                  d={`M 0,${200 - (priceData[0].price / Math.max(...priceData.map(p => p.price)) * 180)} ${
+                    priceData.map((point, i) => 
+                      `L ${(i / (priceData.length - 1)) * 400},${200 - (point.price / Math.max(...priceData.map(p => p.price)) * 180)}`
+                    ).join(' ')
+                  }`}
+                  stroke={signal.action === 'BUY' ? '#10B981' : signal.action === 'SELL' ? '#EF4444' : '#6B7280'}
+                  strokeWidth="2"
+                  fill="none"
+                />
+              </svg>
+              
+              <div 
+                className="absolute w-3 h-3 rounded-full border-2 border-white bg-accent"
+                style={{
+                  left: '95%',
+                  top: `${200 - (priceData[priceData.length - 1].price / Math.max(...priceData.map(p => p.price)) * 180) - 6}px`
+                }}
+              ></div>
             </div>
           </div>
-
-          <div className="bg-secondary/50 rounded-xl p-4 border border-gray-600">
-            <h3 className="text-lg font-semibold text-white mb-3">Signal Details</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Strategy:</span>
-                <span className="text-white">Multi-Strategy Consensus</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Reason:</span>
-                <span className="text-white text-right">{signal.reason}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Confidence:</span>
-                <span className="text-white">{signal.confidence > 0 ? (signal.confidence * 100).toFixed(1) + '%' : 'Calculating...'}</span>
-              </div>
+          
+          <div className="absolute bottom-4 left-4">
+            <div className="text-2xl font-bold text-white">${signal.price.toFixed(2)}</div>
+            <div className={`text-sm ${
+              marketAnalysis.trend === 'BULLISH' ? 'text-profit' : 
+              marketAnalysis.trend === 'BEARISH' ? 'text-loss' : 'text-gray-400'
+            }`}>
+              {marketAnalysis.trend} Market
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Right Column - Trading Controls */}
-        <div className="space-y-4">
-          <div className="bg-secondary/50 rounded-xl p-4 border border-gray-600">
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
-              <DollarSign className="w-5 h-5 text-green-400" />
-              <span>Trade Controls</span>
-            </h3>
-            
-            {!isTrading ? (
-              <div className="space-y-4">
-                <button
-                  onClick={handleStartTrade}
-                  disabled={signal.action === 'HOLD' || signal.confidence < 0.6}
-                  className={`w-full py-3 px-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
-                    signal.action !== 'HOLD' && signal.confidence >= 0.6
-                      ? 'bg-profit hover:bg-green-500 text-white profit-glow'
-                      : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <Play className="w-5 h-5" />
-                  <span>Start {signal.action} Trade</span>
-                </button>
-                
-                {signal.action === 'HOLD' && (
-                  <div className="text-center p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400 mx-auto mb-2" />
-                    <p className="text-yellow-400 text-sm">No clear trading signal. Waiting for better opportunity.</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="bg-gray-800 p-3 rounded-lg">
-                    <div className="text-gray-400 text-sm">Duration</div>
-                    <div className="text-white font-bold flex items-center justify-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{currentDuration}</span>
-                    </div>
-                  </div>
-                  <div className={`p-3 rounded-lg ${currentPnL >= 0 ? 'bg-green-900/30' : 'bg-red-900/30'}`}>
-                    <div className="text-gray-400 text-sm">Current PnL</div>
-                    <div className={`font-bold ${currentPnL >= 0 ? 'text-profit' : 'text-loss'}`}>
-                      ${currentPnL.toFixed(4)}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleCloseTrade}
-                  className={`w-full py-3 px-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-2 ${
-                    currentPnL >= 0 
-                      ? 'bg-profit hover:bg-green-500 text-white' 
-                      : 'bg-loss hover:bg-red-500 text-white'
-                  }`}
-                >
-                  <Square className="w-5 h-5" />
-                  <span>Close Trade ({currentPnL >= 0 ? 'WIN' : 'LOSS'})</span>
-                </button>
-
-                <div className="text-center p-2 bg-blue-900/20 border border-blue-700 rounded-lg">
-                  <p className="text-blue-400 text-xs">
-                    Trade Active: {currentTrade?.action} {currentTrade?.symbol} @ ${currentTrade?.entryPrice.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            )}
+      {/* Market Analysis */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-secondary/50 rounded-lg p-4 border border-gray-600">
+          <div className="text-gray-400 text-sm">RSI</div>
+          <div className={`text-xl font-bold ${
+            marketAnalysis.rsi < 30 ? 'text-profit' : 
+            marketAnalysis.rsi > 70 ? 'text-loss' : 'text-white'
+          }`}>
+            {marketAnalysis.rsi.toFixed(1)}
           </div>
-
-          <div className="bg-secondary/50 rounded-xl p-4 border border-gray-600">
-            <h3 className="text-lg font-semibold text-white mb-3">Risk Management</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Position Size:</span>
-                <span className="text-white">0.001 BTC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Risk per Trade:</span>
-                <span className="text-white">2%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Max Drawdown:</span>
-                <span className="text-white">10%</span>
-              </div>
-            </div>
+        </div>
+        
+        <div className="bg-secondary/50 rounded-lg p-4 border border-gray-600">
+          <div className="text-gray-400 text-sm">Volatility</div>
+          <div className="text-xl font-bold text-white">
+            {marketAnalysis.volatility.toFixed(1)}%
           </div>
+        </div>
+        
+        <div className="bg-secondary/50 rounded-lg p-4 border border-gray-600">
+          <div className="text-gray-400 text-sm">Trend Strength</div>
+          <div className="text-xl font-bold text-white">
+            {(marketAnalysis.strength * 100).toFixed(0)}%
+          </div>
+        </div>
+        
+        <div className="bg-secondary/50 rounded-lg p-4 border border-gray-600">
+          <div className="text-gray-400 text-sm">MACD</div>
+          <div className={`text-sm font-bold ${
+            marketAnalysis.macd.histogram > 0 ? 'text-profit' : 'text-loss'
+          }`}>
+            {marketAnalysis.macd.histogram > 0 ? 'Bullish' : 'Bearish'}
+          </div>
+        </div>
+      </div>
+
+      {/* Trade Info */}
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="bg-loss/20 rounded-lg p-4 border border-loss">
+          <div className="text-loss text-sm font-semibold">Stop Loss</div>
+          <div className="text-white font-bold">${signal.stopLoss.toFixed(2)}</div>
+        </div>
+        
+        <div className="bg-profit/20 rounded-lg p-4 border border-profit">
+          <div className="text-profit text-sm font-semibold">Take Profit</div>
+          <div className="text-white font-bold">${signal.takeProfit.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {/* Strategy Confidence */}
+      <div className="mt-6 bg-accent/10 rounded-xl p-4 border border-accent">
+        <h3 className="text-lg font-semibold text-white mb-2">Strategy Confidence</h3>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Based on {strategyBreakdown.total} strategies</span>
+          <span className={`text-lg font-bold ${
+            signal.confidence >= 0.8 ? 'text-profit' : 
+            signal.confidence >= 0.6 ? 'text-yellow-400' : 'text-loss'
+          }`}>
+            {(signal.confidence * 100).toFixed(1)}% Confidence
+          </span>
         </div>
       </div>
     </div>
